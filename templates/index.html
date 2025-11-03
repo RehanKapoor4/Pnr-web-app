@@ -1,0 +1,394 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Indian Railway PNR Status</title>
+    <style>
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+        }
+
+        body {
+            font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+            min-height: 100vh;
+            display: flex;
+            flex-direction: column; /* <-- 1. ADDED THIS LINE */
+            justify-content: center;
+            align-items: center;
+            padding: 20px;
+        }
+
+        /* 2. ADDED THIS NEW STYLE BLOCK FOR THE FOOTER */
+        footer {
+            text-align: center;
+            color: rgba(255, 255, 255, 0.8);
+            margin-top: 20px;
+            font-size: 14px;
+        }
+
+        .container {
+            background: white;
+            border-radius: 20px;
+            box-shadow: 0 20px 60px rgba(0, 0, 0, 0.3);
+            max-width: 600px;
+            width: 100%;
+            padding: 40px;
+        }
+
+        h1 {
+            color: #333;
+            text-align: center;
+            margin-bottom: 10px;
+            font-size: 28px;
+        }
+
+        .subtitle {
+            text-align: center;
+            color: #666;
+            margin-bottom: 30px;
+            font-size: 14px;
+        }
+
+        .input-group {
+            margin-bottom: 20px;
+        }
+
+        label {
+            display: block;
+            margin-bottom: 8px;
+            color: #555;
+            font-weight: 600;
+        }
+
+        input[type="text"] {
+            width: 100%;
+            padding: 15px;
+            border: 2px solid #e0e0e0;
+            border-radius: 10px;
+            font-size: 16px;
+            transition: border-color 0.3s;
+        }
+
+        input[type="text"]:focus {
+            outline: none;
+            border-color: #667eea;
+        }
+
+        .btn {
+            width: 100%;
+            padding: 15px;
+            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+            color: white;
+            border: none;
+            border-radius: 10px;
+            font-size: 16px;
+            font-weight: 600;
+            cursor: pointer;
+            transition: transform 0.2s, box-shadow 0.2s;
+        }
+
+        .btn:hover {
+            transform: translateY(-2px);
+            box-shadow: 0 10px 20px rgba(102, 126, 234, 0.4);
+        }
+
+        .btn:disabled {
+            background: #ccc;
+            cursor: not-allowed;
+            transform: none;
+        }
+
+        .loading {
+            display: none;
+            text-align: center;
+            margin-top: 20px;
+        }
+
+        .spinner {
+            border: 4px solid #f3f3f3;
+            border-top: 4px solid #667eea;
+            border-radius: 50%;
+            width: 40px;
+            height: 40px;
+            animation: spin 1s linear infinite;
+            margin: 0 auto 10px;
+        }
+
+        @keyframes spin {
+            0% { transform: rotate(0deg); }
+            100% { transform: rotate(360deg); }
+        }
+
+        .error {
+            background: #fee;
+            border: 1px solid #fcc;
+            color: #c33;
+            padding: 15px;
+            border-radius: 10px;
+            margin-top: 20px;
+            display: none;
+        }
+
+        .result {
+            margin-top: 30px;
+            display: none;
+        }
+
+        .result-header {
+            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+            color: white;
+            padding: 20px;
+            border-radius: 10px 10px 0 0;
+            text-align: center;
+        }
+
+        .result-header h2 {
+            font-size: 20px;
+            margin-bottom: 5px;
+        }
+
+        .route {
+            font-size: 24px;
+            font-weight: bold;
+            margin: 10px 0;
+        }
+
+        .train-info {
+            font-size: 16px;
+            opacity: 0.9;
+        }
+
+        .result-body {
+            background: #f9f9f9;
+            padding: 20px;
+            border-radius: 0 0 10px 10px;
+        }
+
+        .info-row {
+            display: flex;
+            justify-content: space-between;
+            padding: 12px 0;
+            border-bottom: 1px solid #e0e0e0;
+        }
+
+        .info-row:last-child {
+            border-bottom: none;
+        }
+
+        .info-label {
+            color: #666;
+            font-weight: 600;
+        }
+
+        .info-value {
+            color: #333;
+            text-align: right;
+        }
+
+        .passengers {
+            margin-top: 20px;
+        }
+
+        .passengers h3 {
+            color: #333;
+            margin-bottom: 15px;
+            font-size: 18px;
+        }
+
+        .passenger-card {
+            background: white;
+            padding: 15px;
+            border-radius: 10px;
+            margin-bottom: 10px;
+            border-left: 4px solid #667eea;
+        }
+
+        .passenger-number {
+            font-weight: bold;
+            color: #667eea;
+            margin-bottom: 5px;
+        }
+
+        .passenger-status {
+            color: #333;
+            font-size: 15px;
+        }
+
+        .processing-time {
+            text-align: center;
+            color: #999;
+            font-size: 12px;
+            margin-top: 15px;
+        }
+    </style>
+</head>
+<body>
+    <div class="container">
+        <h1>🚂 Indian Railway PNR Status</h1>
+        <p class="subtitle">Check your ticket booking status instantly</p>
+
+        <form id="pnrForm">
+            <div class="input-group">
+                <label for="pnr">Enter 10-Digit PNR Number</label>
+                <input 
+                    type="text" 
+                    id="pnr" 
+                    name="pnr" 
+                    placeholder="e.g., 1234567890"
+                    maxlength="10"
+                    required
+                >
+            </div>
+            <button type="submit" class="btn" id="submitBtn">Check Status</button>
+        </form>
+
+        <div class="loading" id="loading">
+            <div class="spinner"></div>
+            <p>Fetching PNR status...</p>
+        </div>
+
+        <div class="error" id="error"></div>
+
+        <div class="result" id="result">
+            <div class="result-header">
+                <h2>PNR Status</h2>
+                <div class="route" id="route"></div>
+                <div class="train-info" id="trainInfo"></div>
+            </div>
+            <div class="result-body">
+                <div class="info-row">
+                    <span class="info-label">Date of Journey:</span>
+                    <span class="info-value" id="doj"></span>
+                </div>
+                <div class="info-row">
+                    <span class="info-label">Class:</span>
+                    <span class="info-value" id="class"></span>
+                </div>
+                <div class="info-row">
+                    <span class="info-label">Quota:</span>
+                    <span class="info-value" id="quota"></span>
+                </div>
+
+                <div class="passengers" id="passengers"></div>
+
+                <div class="processing-time" id="processingTime"></div>
+            </div>
+        </div>
+    </div>
+
+    <footer>
+        <p>Made by Rehan Kapoor</p>
+    </footer>
+
+    <script>
+        const form = document.getElementById('pnrForm');
+        const pnrInput = document.getElementById('pnr');
+        const submitBtn = document.getElementById('submitBtn');
+        const loading = document.getElementById('loading');
+        const error = document.getElementById('error');
+        const result = document.getElementById('result');
+
+        form.addEventListener('submit', async (e) => {
+            e.preventDefault();
+            
+            const pnr = pnrInput.value.trim();
+            
+            // Hide previous results
+            error.style.display = 'none';
+            result.style.display = 'none';
+            
+            // Validate PNR
+            if (pnr.length !== 10) {
+                showError('PNR must be exactly 10 digits');
+                return;
+            }
+            
+            if (!/^\d+$/.test(pnr)) {
+                showError('PNR must contain only numbers');
+                return;
+            }
+            
+            // Show loading
+            loading.style.display = 'block';
+            submitBtn.disabled = true;
+            
+            try {
+                const response = await fetch('/check-pnr', {
+                    method: 'POST',
+                    headers: {
+                        'Content-Type': 'application/json',
+                    },
+                    body: JSON.stringify({ pnr: pnr })
+                });
+                
+                const data = await response.json();
+                
+                if (!response.ok) {
+                    throw new Error(data.error || 'Failed to fetch PNR status');
+                }
+                
+                displayResult(data);
+                
+            } catch (err) {
+                showError(err.message);
+            } finally {
+                loading.style.display = 'none';
+                submitBtn.disabled = false;
+            }
+        });
+
+        function showError(message) {
+            error.textContent = message;
+            error.style.display = 'block';
+        }
+
+        function displayResult(data) {
+            // Set route
+            document.getElementById('route').textContent = 
+                `${data.BrdPointName} → ${data.DestStnName}`;
+            
+            // Set train info
+            document.getElementById('trainInfo').textContent = 
+                `${data.trainNumber} - ${data.trainName}`;
+            
+            // Set journey details
+            document.getElementById('doj').textContent = data.dateOfJourney;
+            document.getElementById('class').textContent = data.className;
+            document.getElementById('quota').textContent = data.quota;
+            
+            // Set passengers
+            const passengersDiv = document.getElementById('passengers');
+            passengersDiv.innerHTML = '<h3>Passenger Details</h3>';
+            
+            data.passengerList.forEach(passenger => {
+                const card = document.createElement('div');
+                card.className = 'passenger-card';
+                card.innerHTML = `
+                    <div class="passenger-number">Passenger ${passenger.passengerSerialNumber}</div>
+                    <div class="passenger-status">
+                        ${passenger.currentStatus} | 
+                        Coach: ${passenger.currentCoachId} | 
+                        Berth: ${passenger.currentBerthNo}
+                    </div>
+                `;
+                passengersDiv.appendChild(card);
+            });
+            
+            // Set processing time
+            document.getElementById('processingTime').textContent = 
+                `Processed in ${data.processingTime} seconds`;
+            
+            result.style.display = 'block';
+        }
+
+        // Allow only numbers in PNR input
+        pnrInput.addEventListener('input', (e) => {
+            e.target.value = e.target.value.replace(/[^0-9]/g, '');
+        });
+    </script>
+</body>
+</html>
